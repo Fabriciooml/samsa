@@ -25,24 +25,29 @@ uv run uvicorn telegram_kafka.app:create_app --factory --host 127.0.0.1 --port 8
 
 For local HTTP only, set `SECURE_COOKIES=false`. Keep default `true` behind HTTPS in production. Open `http://127.0.0.1:8000` and sign in with bootstrap password. Add bot, then route. Bot must be member of target Telegram group and allowed to post. Chat ID is signed numeric ID, often beginning `-100` for supergroups.
 
-## Deploy using only Portainer UI (Docker Standalone)
+## Deploy through Portainer UI (Docker Standalone)
 
-1. In **Images → Build a new image**, name image `samsa:portainer`. If Portainer can fetch this source repository, select **URL** and enter repository URL with Dockerfile path `Dockerfile`. Otherwise select **Web editor**, paste [Dockerfile.portainer](Dockerfile.portainer), use **Select files** to upload [samsa-source.tar.gz](samsa-source.tar.gz), then click **Build the image**. This bundle contains application source and migrations; it contains no credentials. The repository URL method needs a repository URL that Portainer's image builder can access. For later updates using upload method, regenerate bundle with `scripts/make_portainer_bundle.py` during development and repeat image build in Portainer.
-2. In **Stacks → Add stack → Web editor**, name stack `samsa` and paste [compose.portainer.standalone.yml](compose.portainer.standalone.yml). In **Environment variables**, set:
+Pushes to `main` publish `ghcr.io/fabriciooml/samsa:latest` and a `sha-<commit>` tag through [GitHub Actions](.github/workflows/publish-image.yml). The package stays private. Check that the **Publish Samsa image** workflow succeeded under the repository's **Actions** tab before deploying.
+
+1. Create a GitHub personal access token **(classic)** with `read:packages` for the account that can read the private Samsa package. Keep the token out of the stack file and environment variables. In Portainer CE, open **Registries → Add registry → Custom registry**. Set name `Samsa GHCR`, URL `ghcr.io`, enable **Authentication**, username `Fabriciooml`, and password to that token. This is a one-time GitHub credential setup; subsequent deployments use Portainer UI only.
+2. In **Stacks → Add stack → Web editor**, name stack `samsa` and paste [compose.portainer.standalone.yml](compose.portainer.standalone.yml). Select the `Samsa GHCR` registry for the stack. In **Environment variables**, set:
 
    | Variable | Value |
    | --- | --- |
-   | `DATABASE_URL` | Existing PostgreSQL URL using its container name or network alias on `POSTGRES_NETWORK`, for example `postgresql+asyncpg://user:password@postgres:5432/samsa`. URL-encode special characters in password. |
-   | `KAFKA_BOOTSTRAP` | Kafka's **container-reachable advertised listener** on `KAFKA_NETWORK`, for example `kafka:9092`; never `localhost`. |
+   | `DATABASE_URL` | Existing PostgreSQL URL using its container name or network alias on `POSTGRES_NETWORK`, for example `postgresql+asyncpg://user:password@postgres-postgres-1:5432/samsa`. URL-encode special characters in password. |
+   | `KAFKA_BOOTSTRAP` | Kafka's **container-reachable advertised listener** on `KAFKA_NETWORK`; for this Portainer environment, `kafka:9092`. Never `localhost`. |
    | `ADMIN_BOOTSTRAP_PASSWORD` | Strong password you choose for app login. No default password. |
-   | `KAFKA_NETWORK` | Exact Docker network name already attached to Kafka. |
-   | `POSTGRES_NETWORK` | Exact Docker network name already attached to PostgreSQL. |
-   | `UI_BIND` | Host's private LAN address for direct access, or `127.0.0.1` when using a reverse proxy on the host. Default: `127.0.0.1`. |
+   | `KAFKA_NETWORK` | Exact Docker network name already attached to Kafka; here, `kafka_default`. |
+   | `POSTGRES_NETWORK` | Exact Docker network name already attached to PostgreSQL; here, `postgres_default`. |
+   | `UI_BIND` | Host's private LAN address for direct access; here, `192.168.31.226`. Use `127.0.0.1` only when the reverse proxy runs on the host. Default: `127.0.0.1`. |
    | `UI_PORT` | Host port. Default: `8765`. |
    | `SECURE_COOKIES` | `false` for direct HTTP access; `true` when accessed through HTTPS. Default: `false`. |
    | `SAMSA_KEYS_VOLUME` | Optional persistent key-volume name. Default keeps existing `telegram-kafka-notifier-keys` volume. |
+   | `SAMSA_IMAGE` | Optional image override for rollback, such as `ghcr.io/fabriciooml/samsa:sha-<commit>`. Default: `ghcr.io/fabriciooml/samsa:latest`. |
 
-3. Click **Deploy the stack**. Open `http://<UI_BIND>:<UI_PORT>` for direct HTTP access, or your HTTPS proxy URL. Sign in with `ADMIN_BOOTSTRAP_PASSWORD`, then add Bot and Route records. Bot must belong to target Telegram group and have permission to post.
+3. Click **Deploy the stack**. Portainer pulls the image from GHCR. Open `http://<UI_BIND>:<UI_PORT>` for direct HTTP access, or your HTTPS proxy URL. Sign in with `ADMIN_BOOTSTRAP_PASSWORD`, then add Bot and Route records. Bot must belong to target Telegram group and have permission to post. Portainer's HTTPS port does not add HTTPS to Samsa's direct HTTP port.
+
+For updates, wait for **Publish Samsa image** to succeed, then open **Stacks → samsa → Editor → Update the stack** in Portainer. The Compose file uses `pull_policy: always` so a redeploy pulls the current image. To roll back, set `SAMSA_IMAGE` to a previous `sha-<commit>` tag and update the stack.
 
 Find exact network names under each container's **Networks** section in Portainer. Samsa joins both networks; Kafka and PostgreSQL can remain on separate networks. Portainer's Docker Standalone environment has no **Secrets** menu, so stack variables including database and admin passwords remain visible to Portainer administrators and through Docker container inspection. Restrict Portainer access and host port to trusted users/network. For HTTPS access, terminate TLS with your reverse proxy and set `SECURE_COOKIES=true`.
 

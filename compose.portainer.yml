@@ -1,9 +1,8 @@
-# Docker Swarm: build image in Portainer's Images UI on target node or use
-# image already available in a registry, then set NOTIFIER_IMAGE in Portainer.
+# Docker Swarm: configure Portainer access to the private GHCR image.
 # Create four secrets in Portainer's Secrets UI before deploying this stack.
 services:
   samsa:
-    image: ${NOTIFIER_IMAGE}
+    image: ${SAMSA_IMAGE:-ghcr.io/fabriciooml/samsa:latest}
     restart: unless-stopped
     environment:
       KAFKA_BOOTSTRAP: ${KAFKA_BOOTSTRAP}

@@ -2,8 +2,8 @@
 # Set variables in Portainer's Environment variables section.
 services:
   samsa:
-    image: samsa:portainer
-    pull_policy: never
+    image: ${SAMSA_IMAGE:-ghcr.io/fabriciooml/samsa:latest}
+    pull_policy: always
     restart: unless-stopped
     environment:
       DATABASE_URL: ${DATABASE_URL}
