@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Samsa</title>
+  <style>
+    :root { color-scheme: dark; --bg:#0d2027; --panel:#15323a; --raised:#1d4047; --line:#31555b; --text:#eaf3ef; --muted:#a5c2be; --accent:#74e0ca; --warning:#f0bd79; --danger:#ff9991; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font:16px/1.5 system-ui, sans-serif; }
+    button,input,textarea,select { font:inherit; }
+    button { background:var(--accent); color:#0b252b; border:0; padding:.65rem 1rem; border-radius:.3rem; font-weight:700; cursor:pointer; }
+    button.secondary { background:var(--raised); color:var(--text); border:1px solid var(--line); }
+    button.danger { background:transparent; color:var(--danger); border:1px solid var(--danger); }
+    button:disabled { opacity:.5; cursor:not-allowed; }
+    :focus-visible { outline:3px solid var(--warning); outline-offset:3px; }
+    input,textarea,select { width:100%; background:#102a31; border:1px solid var(--line); border-radius:.3rem; color:var(--text); padding:.65rem .75rem; }
+    textarea { min-height:7rem; resize:vertical; }
+    label { display:block; margin:.85rem 0 .3rem; font-weight:650; }
+    small,.muted { color:var(--muted); }
+    code,.mono { font-family:ui-monospace,SFMono-Regular,Consolas,monospace; overflow-wrap:anywhere; }
+    .shell { display:grid; grid-template-columns:15rem minmax(0,1fr); min-height:100vh; }
+    aside { padding:2rem 1.4rem; border-right:1px solid var(--line); background:#10272e; }
+    .brand { font-size:1.3rem; font-weight:800; letter-spacing:-.04em; color:var(--accent); margin:0 0 2.5rem; }
+    aside nav a { display:block; color:var(--text); text-decoration:none; padding:.65rem .3rem; }
+    aside nav a:hover { color:var(--accent); }
+    aside .note { margin-top:2rem; font-size:.9rem; color:var(--muted); }
+    main { width:min(100%,85rem); padding:2rem clamp(1rem,3vw,3rem) 5rem; }
+    h1 { font-size:clamp(2rem,4vw,3rem); line-height:1.1; letter-spacing:-.055em; margin:.1rem 0 1rem; }
+    h2 { font-size:1.35rem; letter-spacing:-.025em; margin:0; }
+    p { max-width:70ch; }
+    .lead { color:var(--muted); margin-bottom:2.6rem; }
+    section { border-top:1px solid var(--line); padding:1.65rem 0 2.1rem; }
+    .section-head { display:flex; justify-content:space-between; align-items:baseline; gap:1rem; margin-bottom:1rem; }
+    .grid { display:grid; grid-template-columns:minmax(15rem,22rem) minmax(0,1fr); gap:2rem; }
+    form { background:var(--panel); padding:1.3rem; border:1px solid var(--line); border-radius:.5rem; align-self:start; }
+    form h3 { margin:0 0 .4rem; font-size:1.05rem; }
+    .actions { display:flex; flex-wrap:wrap; gap:.5rem; margin-top:1.25rem; }
+    .list { display:grid; gap:.65rem; align-content:start; }
+    .item { border:1px solid var(--line); border-radius:.4rem; padding:1rem; background:#102a31; }
+    .item-head { display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap; align-items:start; }
+    .item h3 { margin:0; font-size:1.05rem; }
+    .item p { margin:.3rem 0 .6rem; color:var(--muted); }
+    .tag { display:inline-block; border:1px solid var(--line); border-radius:999px; padding:.1rem .5rem; color:var(--muted); font-size:.83rem; }
+    .tag.on { color:var(--accent); border-color:var(--accent); }
+    .tag.error { color:var(--warning); border-color:var(--warning); }
+    .empty { border:1px dashed var(--line); border-radius:.4rem; padding:1.5rem; color:var(--muted); }
+    .message { min-height:1.5rem; color:var(--accent); }
+    .message.error { color:var(--danger); }
+    .login { max-width:27rem; margin:10vh auto; padding:0 1rem; }
+    .login .brand { margin-bottom:1rem; }
+    .login form { margin-top:2rem; }
+    [hidden] { display:none !important; }
+    @media(max-width:1000px) { .shell { display:block; } aside { padding:1rem; border-right:0; border-bottom:1px solid var(--line); } aside nav,.note { display:none !important; } .brand { margin:0; } main { padding-top:1.5rem; } .grid { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <div id="login" class="login" hidden>
+    <div class="brand">Samsa</div>
+    <h1>Sign in</h1>
+    <p class="muted">Manage Kafka notifications sent to Telegram groups.</p>
+    <form id="login-form">
+      <label for="password">Admin password</label>
+      <input id="password" type="password" autocomplete="current-password" required>
+      <div class="actions"><button>Sign in</button></div>
+    </form>
+    <p id="login-message" class="message" role="status"></p>
+  </div>
+
+  <div id="console" class="shell" hidden>
+    <aside>
+      <div class="brand">Samsa</div>
+      <nav aria-label="Sections">
+        <a href="#bots">Bots</a><a href="#routes">Routes</a><a href="#preview">Preview and test</a><a href="#failures">Failures</a>
+      </nav>
+      <p class="note">One Kafka cluster. Routes send JSON events through Telegram bots.</p>
+      <button id="logout" class="secondary">Sign out</button>
+    </aside>
+    <main>
+      <h1>Notification routes</h1>
+      <p class="lead">Connect Kafka topics to Telegram groups. New routes start with messages produced after creation.</p>
+      <p id="status" class="message" role="status"></p>
+
+      <section id="bots">
+        <div class="section-head"><h2>Bots</h2><small>BotFather tokens stay hidden after saving.</small></div>
+        <div class="grid">
+          <form id="bot-form">
+            <h3 id="bot-form-title">Add bot</h3>
+            <label for="bot-name">Name</label><input id="bot-name" required maxlength="120" placeholder="Operations alerts">
+            <label for="bot-token">Bot token</label><input id="bot-token" type="password" placeholder="123456:…" autocomplete="off">
+            <small>Leave blank while editing to keep saved token.</small>
+            <div class="actions"><button id="bot-save">Save bot</button><button type="button" id="bot-cancel" class="secondary" hidden>Cancel edit</button></div>
+          </form>
+          <div id="bot-list" class="list"></div>
+        </div>
+      </section>
+
+      <section id="routes">
+        <div class="section-head"><h2>Routes</h2><small>One route sends one message per matching record.</small></div>
+        <div class="grid">
+          <form id="route-form">
+            <h3 id="route-form-title">Add route</h3>
+            <label for="route-topic">Kafka topic</label><input id="route-topic" required placeholder="orders.created">
+            <label for="route-bot">Bot</label><select id="route-bot" required></select>
+            <label for="route-chat">Telegram group chat ID</label><input id="route-chat" type="number" required placeholder="-100…">
+            {% raw %}<label for="route-template">MarkdownV2 template</label><textarea id="route-template" required placeholder="*Order:* {{order.id}}"></textarea>
+            <small>JSON fields use <code>{{field}}</code> or <code>{{nested.field}}</code>. Values display as literal text.</small>{% endraw %}
+            <div class="actions"><button id="route-save">Save route</button><button type="button" id="route-cancel" class="secondary" hidden>Cancel edit</button></div>
+          </form>
+          <div id="route-list" class="list"></div>
+        </div>
+      </section>
+
+      <section id="preview">
+        <div class="section-head"><h2>Preview and test</h2><small>Test send posts to configured Telegram group.</small></div>
+        <div class="grid">
+          <form id="preview-form">
+            <label for="preview-route">Route</label><select id="preview-route" required></select>
+            <label for="preview-json">Sample JSON</label><textarea id="preview-json" spellcheck="false" required>{"order":{"id":"A_1"}}</textarea>
+            <div class="actions"><button>Preview message</button><button id="test-send" type="button" class="secondary">Send test message</button></div>
+          </form>
+          <div class="item"><h3>Rendered message</h3><pre id="preview-output" class="mono muted">Choose route and sample JSON.</pre></div>
+        </div>
+      </section>
+
+      <section id="failures">
+        <div class="section-head"><h2>Failures</h2><button id="refresh" class="secondary">Refresh</button></div>
+        <div id="failure-list" class="list"></div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    let csrf = null, bots = [], routes = [], statuses = {}, botEdit = null, routeEdit = null;
+    const $ = id => document.getElementById(id);
+    const node = (tag, text, cls) => { const n = document.createElement(tag); n.textContent = text; if (cls) n.className = cls; return n; };
+    const button = (label, action, cls='secondary') => { const n = node('button', label, cls); n.type='button'; n.addEventListener('click', action); return n; };
+    function notice(text, error=false) { $('status').textContent=text; $('status').classList.toggle('error',error); }
+    async function api(path, options={}) {
+      const response = await fetch(path, { credentials:'same-origin', ...options,
+        headers: { ...(options.body ? {'Content-Type':'application/json'} : {}), ...(csrf ? {'X-CSRF-Token':csrf} : {}), ...(options.headers || {}) } });
+      if (!response.ok) { let data={}; try { data=await response.json(); } catch {} throw new Error(typeof data.detail==='string' ? data.detail : `Request failed (${response.status})`); }
+      return response.status===204 ? null : response.json();
+    }
+    function showConsole(visible) { $('console').hidden=!visible; $('login').hidden=visible; }
+    function options(select, values, label) { select.replaceChildren(); for (const value of values) { const option=node('option',label(value)); option.value=value.id; select.append(option); } }
+    async function load() {
+      const [botData,routeData,failures,state] = await Promise.all([api('/api/bots'),api('/api/routes'),api('/api/failures'),api('/api/status')]);
+      bots=botData; routes=routeData; statuses=state.workers || {};
+      options($('route-bot'),bots,b=>b.name);
+      options($('preview-route'),routes,r=>`${r.topic} → ${r.chat_id}`);
+      drawBots(); drawRoutes(); drawFailures(failures);
+    }
+    function drawBots() {
+      const list=$('bot-list'); list.replaceChildren();
+      if (!bots.length) { list.append(node('p','Add bot before creating route.','empty')); return; }
+      for (const bot of bots) {
+        const item=node('article','', 'item'), head=node('div','', 'item-head');
+        head.append(node('h3',bot.name),node('span',bot.token_hint,'tag')); item.append(head);
+        const actions=node('div','', 'actions');
+        actions.append(button('Edit',()=>{ botEdit=bot.id; $('bot-form-title').textContent='Edit bot'; $('bot-name').value=bot.name; $('bot-token').value=''; $('bot-cancel').hidden=false; $('bot-form').scrollIntoView({behavior:'smooth'}); }));
+        actions.append(button('Delete',async()=>{ if (!confirm(`Delete ${bot.name}?`)) return; try { await api(`/api/bots/${bot.id}`,{method:'DELETE'}); notice('Bot deleted.'); await load(); } catch(e) { notice(e.message,true); } },'danger'));
+        item.append(actions); list.append(item);
+      }
+    }
+    function drawRoutes() {
+      const list=$('route-list'); list.replaceChildren();
+      if (!routes.length) { list.append(node('p','Create route to start sending new Kafka messages.','empty')); return; }
+      for (const route of routes) {
+        const item=node('article','', 'item'), head=node('div','', 'item-head');
+        head.append(node('h3',route.topic),node('span',route.enabled?'Active':'Paused',route.enabled?'tag on':'tag'));
+        item.append(head,node('p',`To ${route.chat_id} via ${bots.find(b=>b.id===route.bot_id)?.name || 'bot'}`),node('code',route.template));
+        const worker=statuses[route.id];
+        if (worker) item.append(node('p',worker.last_error ? `Worker error: ${worker.last_error}` : `Last processed: ${Object.entries(worker.last_processed || {}).map(([partition,offset])=>`partition ${partition}, offset ${offset}`).join('; ') || 'waiting for records'}`,'mono'));
+        const actions=node('div','', 'actions');
+        actions.append(button('Edit',()=>{ routeEdit=route.id; $('route-form-title').textContent='Edit route'; $('route-topic').value=route.topic; $('route-topic').disabled=true; $('route-bot').value=route.bot_id; $('route-chat').value=route.chat_id; $('route-template').value=route.template; $('route-cancel').hidden=false; $('route-form').scrollIntoView({behavior:'smooth'}); }));
+        actions.append(button(route.enabled?'Pause':'Resume',async()=>{ try { await api(`/api/routes/${route.id}`,{method:'PATCH',body:JSON.stringify({enabled:!route.enabled})}); notice(route.enabled?'Route paused.':'Route resumed.'); await load(); } catch(e) { notice(e.message,true); } }));
+        actions.append(button('Delete',async()=>{ if (!confirm(`Delete route for ${route.topic}?`)) return; try { await api(`/api/routes/${route.id}`,{method:'DELETE'}); notice('Route deleted.'); await load(); } catch(e) { notice(e.message,true); } },'danger'));
+        item.append(actions); list.append(item);
+      }
+    }
+    function drawFailures(failures) {
+      const list=$('failure-list'); list.replaceChildren();
+      if (!failures.length) { list.append(node('p','No failed deliveries recorded.','empty')); return; }
+      for (const failure of failures) {
+        const item=node('article','', 'item'), head=node('div','', 'item-head');
+        head.append(node('h3',failure.category.replaceAll('_',' ')),node('span',failure.retry_state,'tag error'));
+        item.append(head,node('p',failure.detail),node('code',`${failure.topic} / partition ${failure.partition} / offset ${failure.offset}`));
+        if (failure.retry_state==='open' && failure.category.startsWith('telegram_')) item.append(button('Retry send',async()=>{ try { await api(`/api/failures/${failure.id}/retry`,{method:'POST'}); notice('Message sent again.'); await load(); } catch(e) { notice(e.message,true); } }));
+        list.append(item);
+      }
+    }
+    $('login-form').addEventListener('submit',async e=>{ e.preventDefault(); try { const result=await api('/api/login',{method:'POST',body:JSON.stringify({password:$('password').value})}); csrf=result.csrf_token; $('password').value=''; showConsole(true); await load(); } catch(err) { $('login-message').textContent=err.message; } });
+    $('logout').addEventListener('click',async()=>{ try { await api('/api/logout',{method:'POST'}); } finally { csrf=null; showConsole(false); } });
+    $('bot-form').addEventListener('submit',async e=>{ e.preventDefault(); const body={name:$('bot-name').value.trim()}; if ($('bot-token').value) body.token=$('bot-token').value.trim(); try { await api(botEdit?`/api/bots/${botEdit}`:'/api/bots',{method:botEdit?'PATCH':'POST',body:JSON.stringify(body)}); notice('Bot saved.'); botEdit=null; $('bot-form').reset(); $('bot-form-title').textContent='Add bot'; $('bot-cancel').hidden=true; await load(); } catch(err) { notice(err.message,true); } });
+    $('bot-cancel').addEventListener('click',()=>{ botEdit=null; $('bot-form').reset(); $('bot-form-title').textContent='Add bot'; $('bot-cancel').hidden=true; });
+    $('route-form').addEventListener('submit',async e=>{ e.preventDefault(); const body={bot_id:$('route-bot').value,chat_id:Number($('route-chat').value),template:$('route-template').value}; if (!routeEdit) body.topic=$('route-topic').value.trim(); try { await api(routeEdit?`/api/routes/${routeEdit}`:'/api/routes',{method:routeEdit?'PATCH':'POST',body:JSON.stringify(body)}); notice('Route saved.'); routeEdit=null; $('route-form').reset(); $('route-topic').disabled=false; $('route-form-title').textContent='Add route'; $('route-cancel').hidden=true; await load(); } catch(err) { notice(err.message,true); } });
+    $('route-cancel').addEventListener('click',()=>{ routeEdit=null; $('route-form').reset(); $('route-topic').disabled=false; $('route-form-title').textContent='Add route'; $('route-cancel').hidden=true; });
+    $('preview-form').addEventListener('submit',async e=>{ e.preventDefault(); try { const message=JSON.parse($('preview-json').value); const data=await api(`/api/routes/${$('preview-route').value}/preview`,{method:'POST',body:JSON.stringify({message})}); $('preview-output').textContent=data.text; notice('Preview rendered.'); } catch(err) { notice(err.message,true); } });
+    $('test-send').addEventListener('click',async()=>{ if (!confirm('Send test message to this route’s Telegram group?')) return; try { const message=JSON.parse($('preview-json').value); const data=await api(`/api/routes/${$('preview-route').value}/test`,{method:'POST',body:JSON.stringify({message})}); $('preview-output').textContent=data.text; notice('Test message sent.'); } catch(err) { notice(err.message,true); } });
+    $('refresh').addEventListener('click',()=>load().catch(err=>notice(err.message,true)));
+    api('/api/me').then(data=>{ csrf=data.csrf_token; showConsole(true); return load(); }).catch(()=>showConsole(false));
+  </script>
+</body>
+</html>

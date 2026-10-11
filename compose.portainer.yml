@@ -1,0 +1,40 @@
+# Docker Swarm: build image in Portainer's Images UI on target node or use
+# image already available in a registry, then set NOTIFIER_IMAGE in Portainer.
+# Create four secrets in Portainer's Secrets UI before deploying this stack.
+services:
+  samsa:
+    image: ${NOTIFIER_IMAGE}
+    restart: unless-stopped
+    environment:
+      KAFKA_BOOTSTRAP: ${KAFKA_BOOTSTRAP}
+      DATABASE_URL_FILE: /run/secrets/database_url
+      ADMIN_BOOTSTRAP_PASSWORD_FILE: /run/secrets/admin_password
+      TOKEN_ENCRYPTION_KEY_FILE: /run/secrets/token_key
+      SESSION_SECRET_FILE: /run/secrets/session_secret
+      SECURE_COOKIES: "true"
+    secrets:
+      - database_url
+      - admin_password
+      - token_key
+      - session_secret
+    networks:
+      - kafka
+      - postgres
+
+secrets:
+  database_url:
+    external: true
+  admin_password:
+    external: true
+  token_key:
+    external: true
+  session_secret:
+    external: true
+
+networks:
+  kafka:
+    external: true
+    name: ${KAFKA_NETWORK}
+  postgres:
+    external: true
+    name: ${POSTGRES_NETWORK}

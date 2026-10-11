@@ -1,0 +1,32 @@
+# Paste into Portainer Stacks > Add stack > Web editor (Docker Standalone).
+# Set variables in Portainer's Environment variables section.
+services:
+  samsa:
+    image: samsa:portainer
+    pull_policy: never
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      KAFKA_BOOTSTRAP: ${KAFKA_BOOTSTRAP}
+      ADMIN_BOOTSTRAP_PASSWORD: ${ADMIN_BOOTSTRAP_PASSWORD}
+      AUTO_GENERATE_KEYS: "true"
+      SECURE_COOKIES: ${SECURE_COOKIES:-false}
+    volumes:
+      - telegram-kafka-notifier-keys:/app/keys
+    ports:
+      - "${UI_BIND:-127.0.0.1}:${UI_PORT:-8765}:8000"
+    networks:
+      - kafka
+      - postgres
+
+volumes:
+  telegram-kafka-notifier-keys:
+    name: ${SAMSA_KEYS_VOLUME:-telegram-kafka-notifier-keys}
+
+networks:
+  kafka:
+    external: true
+    name: ${KAFKA_NETWORK}
+  postgres:
+    external: true
+    name: ${POSTGRES_NETWORK}

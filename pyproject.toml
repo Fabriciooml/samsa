@@ -1,0 +1,39 @@
+[project]
+name = "samsa"
+version = "0.1.0"
+description = "Configurable Kafka to Telegram notification service"
+requires-python = ">=3.13"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "uvicorn>=0.30,<1",
+  "jinja2>=3.1,<4",
+  "python-multipart>=0.0.12,<1",
+  "itsdangerous>=2.2,<3",
+  "httpx>=0.27,<1",
+  "sqlalchemy>=2,<3",
+  "alembic>=1.13,<2",
+  "asyncpg>=0.29,<1",
+  "cryptography>=43,<47",
+  "argon2-cffi>=23,<26",
+  "python-components>=0.4,<0.5",
+  "fastapi-component>=0.1,<1",
+  "postgres-component>=0.1,<1",
+  "prometheus-client>=0.20,<1",
+  "kafka-component==0.2.0",
+  "aiokafka>=0.14,<1",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8,<10", "pytest-asyncio>=0.24,<2", "testcontainers[kafka,postgres]>=4,<5"]
+
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/telegram_kafka"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = ["integration: requires Docker containers"]
